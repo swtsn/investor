@@ -35,4 +35,3 @@ func formatCurrency(d decimal.Decimal) string {
 	}
 	return fmt.Sprintf("$%s", d.StringFixed(2))
 }
-

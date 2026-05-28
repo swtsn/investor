@@ -127,4 +127,3 @@ func buildDashboardTable(data []client.BucketDashboard, w, h int) table.Model {
 	t.SetStyles(defaultTableStyles())
 	return t
 }
-

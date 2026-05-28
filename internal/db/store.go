@@ -11,18 +11,18 @@ import (
 
 var (
 	_ domain.BucketRepository       = (*sqliteBucketRepo)(nil)
-	_ domain.ContributionRepository  = (*sqliteContributionRepo)(nil)
-	_ domain.DeploymentRepository    = (*sqliteDeploymentRepo)(nil)
-	_ domain.BudgetEventRepository   = (*sqliteBudgetEventRepo)(nil)
+	_ domain.ContributionRepository = (*sqliteContributionRepo)(nil)
+	_ domain.DeploymentRepository   = (*sqliteDeploymentRepo)(nil)
+	_ domain.BudgetEventRepository  = (*sqliteBudgetEventRepo)(nil)
 )
 
 // Store holds all repository implementations backed by a single SQLite connection.
 type Store struct {
-	db           *sql.DB
-	Buckets      domain.BucketRepository
+	db            *sql.DB
+	Buckets       domain.BucketRepository
 	Contributions domain.ContributionRepository
-	Deployments  domain.DeploymentRepository
-	BudgetEvents domain.BudgetEventRepository
+	Deployments   domain.DeploymentRepository
+	BudgetEvents  domain.BudgetEventRepository
 }
 
 func Open(path string) (*Store, error) {

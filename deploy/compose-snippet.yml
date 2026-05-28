@@ -1,0 +1,12 @@
+# Merge this service block into ~/docker-compose.yml on the remote host.
+# Add `investor-data:` under the top-level `volumes:` key if it is not already declared.
+investor:
+  image: investor
+  ports:
+    - "10001:50051"
+  volumes:
+    - investor-data:/var/lib/investor
+  environment:
+    INVESTOR_DB: /var/lib/investor/investor.db
+    INVESTOR_ADDR: 0.0.0.0:50051
+  restart: unless-stopped

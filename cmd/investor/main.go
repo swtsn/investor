@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/alecthomas/kong"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/swtsn/investor/internal/tui"
@@ -12,12 +13,12 @@ import (
 )
 
 func main() {
-	addr := os.Getenv("INVESTOR_ADDR")
-	if addr == "" {
-		addr = "localhost:50051"
+	var cli struct {
+		Addr string `env:"INVESTOR_ADDR" default:"apollo:10001" help:"Server address"`
 	}
+	kong.Parse(&cli)
 
-	c, err := client.New(addr)
+	c, err := client.New(cli.Addr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connect: %v\n", err)
 		os.Exit(1)

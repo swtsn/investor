@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/alecthomas/kong"
 	"google.golang.org/grpc"
 
 	investorv1 "github.com/swtsn/investor/gen/investor/v1"
@@ -16,25 +17,21 @@ import (
 )
 
 func main() {
-	dbPath := os.Getenv("INVESTOR_DB")
-	if dbPath == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatalf("home dir: %v", err)
-		}
-		dbPath = filepath.Join(home, ".investor", "investor.db")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("home dir: %v", err)
 	}
-
-	addr := os.Getenv("INVESTOR_ADDR")
-	if addr == "" {
-		addr = "localhost:50051"
+	var cli struct {
+		DB   string `env:"INVESTOR_DB"   default:"${home}/.investor/investor.db" help:"Path to SQLite database"`
+		Addr string `env:"INVESTOR_ADDR" default:"localhost:50051"               help:"Listen address"`
 	}
+	kong.Parse(&cli, kong.Vars{"home": home})
 
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(cli.DB), 0o700); err != nil {
 		log.Fatalf("create db dir: %v", err)
 	}
 
-	store, err := db.Open(dbPath)
+	store, err := db.Open(cli.DB)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
@@ -49,11 +46,11 @@ func main() {
 	srv := grpc.NewServer()
 	investorv1.RegisterInvestorServiceServer(srv, handler)
 
-	lis, err := net.Listen("tcp", addr)
+	lis, err := net.Listen("tcp", cli.Addr)
 	if err != nil {
-		log.Fatalf("listen %s: %v", addr, err)
+		log.Fatalf("listen %s: %v", cli.Addr, err)
 	}
-	fmt.Printf("investor-server listening on %s\n", addr)
+	fmt.Printf("investor-server listening on %s\n", cli.Addr)
 	if err := srv.Serve(lis); err != nil {
 		log.Fatalf("serve: %v", err)
 	}

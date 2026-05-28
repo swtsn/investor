@@ -40,8 +40,8 @@ type App struct {
 
 func New(c client.Client) App {
 	return App{
-		client:   c,
-		mode:     modeDashboard,
+		client:    c,
+		mode:      modeDashboard,
 		dashboard: views.NewDashboardView(c),
 		month:     views.NewMonthView(c),
 		budget:    views.NewBudgetView(c),

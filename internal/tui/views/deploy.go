@@ -733,10 +733,10 @@ func (v DeployView) submit(date time.Time) tea.Cmd {
 	c := v.client
 
 	d := domain.Deployment{
-		BucketID:      v.selectedBucket.ID,
-		AllocationID:  v.selectedAllocID,
-		Amount:        v.amount,
-		Date:          date,
+		BucketID:     v.selectedBucket.ID,
+		AllocationID: v.selectedAllocID,
+		Amount:       v.amount,
+		Date:         date,
 	}
 	if v.symbol != "" {
 		s := v.symbol
