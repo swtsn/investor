@@ -8,8 +8,8 @@ Go TUI application to track investment diversification and allocation.
 
 ## Working with Claude
 
-- **CONTEXT.md** (repo root) — living domain model and project context; read it at the start of significant tasks
-- **docs/adr/** — architecture decision records; create one when a non-obvious architectural choice is made
+- **CONTEXT.md** (repo root) — living domain model, glossary, and core rules; read it at the start of any significant task
+- **docs/adr/** — architecture decision records (ADR-001 through ADR-004 established); create a new one when a non-obvious architectural choice is made
 - **Plans** — stored at `~/.claude/projects/-repos-investor/plans/`, never repo-local
 
 ## Commands
