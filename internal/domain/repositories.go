@@ -17,6 +17,9 @@ type ContributionRepository interface {
 	GetContribution(ctx context.Context, id int64) (Contribution, error)
 	ListByBucket(ctx context.Context, bucketID int64) ([]Contribution, error)
 	ListByBucketAndMonth(ctx context.Context, bucketID int64, year, month int) ([]Contribution, error)
+	// ListDeployableSources returns contributions for bucketID where remaining > 0.
+	// remaining = contribution.amount − Σ deployment_sources.amount for that contribution.
+	ListDeployableSources(ctx context.Context, bucketID int64) ([]ContributionSummary, error)
 }
 
 type DeploymentRepository interface {

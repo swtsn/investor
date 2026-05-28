@@ -101,6 +101,44 @@ func scanContributions(rows interface {
 	return out, rows.Err()
 }
 
+func (r *sqliteContributionRepo) ListDeployableSources(ctx context.Context, bucketID int64) ([]domain.ContributionSummary, error) {
+	rows, err := r.q.QueryContext(ctx,
+		`SELECT c.id, c.bucket_id, c.amount, c.origination, c.budget_event_id, c.date,
+		        c.amount - COALESCE(SUM(ds.amount), 0) AS remaining
+		 FROM contributions c
+		 LEFT JOIN deployment_sources ds ON ds.contribution_id = c.id
+		 WHERE c.bucket_id = ?
+		 GROUP BY c.id
+		 HAVING c.amount - COALESCE(SUM(ds.amount), 0) > 0
+		 ORDER BY c.date, c.id`,
+		bucketID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []domain.ContributionSummary
+	for rows.Next() {
+		var cs domain.ContributionSummary
+		var amount, dateStr string
+		var remaining float64
+		if err := rows.Scan(&cs.ID, &cs.BucketID, &amount, &cs.Origination, &cs.BudgetEventID, &dateStr, &remaining); err != nil {
+			return nil, err
+		}
+		var parseErr error
+		if cs.Amount, parseErr = decimal.NewFromString(amount); parseErr != nil {
+			return nil, fmt.Errorf("parse amount: %w", parseErr)
+		}
+		if cs.Date, parseErr = time.Parse(time.RFC3339, dateStr); parseErr != nil {
+			return nil, fmt.Errorf("parse date: %w", parseErr)
+		}
+		cs.Remaining = decimal.NewFromFloat(remaining)
+		out = append(out, cs)
+	}
+	return out, rows.Err()
+}
+
 func monthBounds(year, month int) (string, string) {
 	start := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	end := start.AddDate(0, 1, 0)

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/swtsn/investor/internal/db"
@@ -78,6 +79,64 @@ func (s *PoolService) GetPoolBreakdown(ctx context.Context, bucketID int64, year
 	}
 	bd.Total = bd.Budget.Add(bd.Reinvestment).Add(bd.Slush)
 	return bd, nil
+}
+
+// BucketDashboard is the aggregated per-bucket data for the dashboard.
+type BucketDashboard struct {
+	Bucket        domain.Bucket
+	PoolBalance   decimal.Decimal
+	Breakdown     PoolBreakdown
+	DeployedMonth decimal.Decimal
+}
+
+// GetDashboard returns per-bucket dashboard data for the current month.
+func (s *PoolService) GetDashboard(ctx context.Context) ([]BucketDashboard, error) {
+	now := time.Now()
+	year, month := now.Year(), int(now.Month())
+
+	buckets, err := s.store.Buckets.ListBuckets(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]BucketDashboard, len(buckets))
+	for i, b := range buckets {
+		balance, err := poolBalance(ctx, s.store, b.ID)
+		if err != nil {
+			return nil, err
+		}
+		breakdown, err := s.GetPoolBreakdown(ctx, b.ID, year, month)
+		if err != nil {
+			return nil, err
+		}
+		deps, err := s.store.Deployments.ListByBucketAndMonth(ctx, b.ID, year, month)
+		if err != nil {
+			return nil, err
+		}
+		var deployed decimal.Decimal
+		for _, d := range deps {
+			deployed = deployed.Add(d.Amount)
+		}
+		result[i] = BucketDashboard{
+			Bucket:        b,
+			PoolBalance:   balance,
+			Breakdown:     breakdown,
+			DeployedMonth: deployed,
+		}
+	}
+	return result, nil
+}
+
+func (s *PoolService) ListBuckets(ctx context.Context) ([]domain.Bucket, error) {
+	return s.store.Buckets.ListBuckets(ctx)
+}
+
+func (s *PoolService) ListAllocations(ctx context.Context, bucketID int64) ([]domain.Allocation, error) {
+	return s.store.Buckets.ListAllocations(ctx, bucketID)
+}
+
+func (s *PoolService) ListDeployableSources(ctx context.Context, bucketID int64) ([]domain.ContributionSummary, error) {
+	return s.store.Contributions.ListDeployableSources(ctx, bucketID)
 }
 
 func (s *PoolService) GetMonthSummary(ctx context.Context, year, month int) (MonthSummary, error) {

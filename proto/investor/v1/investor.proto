@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+package investor.v1;
+
+option go_package = "github.com/swtsn/investor/gen/investor/v1;investorv1";
+
+import "google/protobuf/timestamp.proto";
+
+service InvestorService {
+  rpc ListBuckets(ListBucketsRequest) returns (ListBucketsResponse);
+  rpc ListAllocations(ListAllocationsRequest) returns (ListAllocationsResponse);
+  rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse);
+  rpc GetMonthSummary(GetMonthSummaryRequest) returns (GetMonthSummaryResponse);
+  rpc ListDeployableSources(ListDeployableSourcesRequest) returns (ListDeployableSourcesResponse);
+  rpc PreviewBudget(PreviewBudgetRequest) returns (PreviewBudgetResponse);
+  rpc ApplyBudget(ApplyBudgetRequest) returns (ApplyBudgetResponse);
+  rpc PreviewDeployment(PreviewDeploymentRequest) returns (PreviewDeploymentResponse);
+  rpc RecordDeployment(RecordDeploymentRequest) returns (RecordDeploymentResponse);
+  rpc RecordReinvestment(RecordReinvestmentRequest) returns (RecordReinvestmentResponse);
+}
+
+// --- Shared domain messages ---
+
+message Bucket {
+  int64 id = 1;
+  string name = 2;
+  string type = 3;
+  string target_pct = 4;
+}
+
+message Allocation {
+  int64 id = 1;
+  int64 bucket_id = 2;
+  string name = 3;
+  string target_pct = 4;
+}
+
+message BudgetEvent {
+  int64 id = 1;
+  string total_amount = 2;
+  google.protobuf.Timestamp date = 3;
+}
+
+message Contribution {
+  int64 id = 1;
+  int64 bucket_id = 2;
+  string amount = 3;
+  string origination = 4;
+  optional int64 budget_event_id = 5;
+  google.protobuf.Timestamp date = 6;
+}
+
+message Deployment {
+  int64 id = 1;
+  int64 bucket_id = 2;
+  optional int64 allocation_id = 3;
+  optional string symbol = 4;
+  optional string shares = 5;
+  optional string price_per_share = 6;
+  string amount = 7;
+  google.protobuf.Timestamp date = 8;
+}
+
+message DeploymentSource {
+  int64 contribution_id = 1;
+  string amount = 2;
+}
+
+message BucketDashboard {
+  int64 bucket_id = 1;
+  string name = 2;
+  string target_pct = 3;
+  string pool_balance = 4;
+  string deployed_this_month = 5;
+  string breakdown_budget = 6;
+  string breakdown_reinvestment = 7;
+  string breakdown_slush = 8;
+  string actual_pct = 9;
+}
+
+message BucketMonthData {
+  Bucket bucket = 1;
+  repeated Contribution contributions = 2;
+  repeated Deployment deployments = 3;
+}
+
+message DeployableSource {
+  Contribution contribution = 1;
+  string remaining = 2;
+}
+
+message BucketAllocation {
+  Bucket bucket = 1;
+  string amount = 2;
+}
+
+message AllocationSplit {
+  Allocation allocation = 1;
+  string amount = 2;
+}
+
+// --- ListBuckets ---
+
+message ListBucketsRequest {}
+message ListBucketsResponse {
+  repeated Bucket buckets = 1;
+}
+
+// --- ListAllocations ---
+
+message ListAllocationsRequest {
+  int64 bucket_id = 1;
+}
+message ListAllocationsResponse {
+  repeated Allocation allocations = 1;
+}
+
+// --- GetDashboard ---
+
+message GetDashboardRequest {}
+message GetDashboardResponse {
+  repeated BucketDashboard buckets = 1;
+}
+
+// --- GetMonthSummary ---
+
+message GetMonthSummaryRequest {
+  int32 year = 1;
+  int32 month = 2;
+}
+message GetMonthSummaryResponse {
+  repeated BudgetEvent budget_events = 1;
+  repeated BucketMonthData buckets = 2;
+}
+
+// --- ListDeployableSources ---
+
+message ListDeployableSourcesRequest {
+  int64 bucket_id = 1;
+}
+message ListDeployableSourcesResponse {
+  repeated DeployableSource sources = 1;
+}
+
+// --- PreviewBudget ---
+
+message PreviewBudgetRequest {
+  string total_amount = 1;
+}
+message PreviewBudgetResponse {
+  repeated BucketAllocation allocations = 1;
+}
+
+// --- ApplyBudget ---
+
+message ApplyBudgetRequest {
+  string total_amount = 1;
+  google.protobuf.Timestamp date = 2;
+}
+message ApplyBudgetResponse {
+  BudgetEvent event = 1;
+}
+
+// --- PreviewDeployment ---
+
+message PreviewDeploymentRequest {
+  int64 bucket_id = 1;
+  string amount = 2;
+}
+message PreviewDeploymentResponse {
+  repeated AllocationSplit splits = 1;
+}
+
+// --- RecordDeployment ---
+
+message RecordDeploymentRequest {
+  int64 bucket_id = 1;
+  optional int64 allocation_id = 2;
+  optional string symbol = 3;
+  optional string shares = 4;
+  optional string price_per_share = 5;
+  string amount = 6;
+  google.protobuf.Timestamp date = 7;
+  repeated DeploymentSource sources = 8;
+}
+message RecordDeploymentResponse {
+  Deployment deployment = 1;
+}
+
+// --- RecordReinvestment ---
+
+message RecordReinvestmentRequest {
+  int64 bucket_id = 1;
+  string amount = 2;
+  google.protobuf.Timestamp date = 3;
+}
+message RecordReinvestmentResponse {
+  Contribution contribution = 1;
+}

@@ -385,6 +385,81 @@ func TestRecordReinvestment(t *testing.T) {
 	}
 }
 
+// --- PoolService.ListDeployableSources ---
+
+func TestListDeployableSources_NoContributions(t *testing.T) {
+	s := newTestStore(t)
+	svc := service.NewPoolService(s)
+	b, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B", Type: domain.BucketTypeFlat, TargetPct: dec("100")})
+
+	sources, err := svc.ListDeployableSources(ctx, b.ID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(sources) != 0 {
+		t.Errorf("expected empty, got %d", len(sources))
+	}
+}
+
+func TestListDeployableSources_PartiallyDrawn(t *testing.T) {
+	s := newTestStore(t)
+	svc := service.NewPoolService(s)
+	b, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B", Type: domain.BucketTypeFlat, TargetPct: dec("100")})
+	ev, _ := s.BudgetEvents.CreateBudgetEvent(ctx, domain.BudgetEvent{
+		TotalAmount: dec("1000"), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+	c, _ := s.Contributions.CreateContribution(ctx, domain.Contribution{
+		BucketID: b.ID, Amount: dec("1000"), Origination: domain.OriginationBudget,
+		BudgetEventID: pInt64(ev.ID), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+	_ = s.InTx(ctx, func(tx *db.Store) error {
+		_, err := tx.Deployments.CreateDeployment(ctx,
+			domain.Deployment{BucketID: b.ID, Amount: dec("400"), Date: time.Date(2026, 5, 5, 0, 0, 0, 0, time.UTC)},
+			[]domain.DeploymentSource{{ContributionID: c.ID, Amount: dec("400")}},
+		)
+		return err
+	})
+
+	sources, err := svc.ListDeployableSources(ctx, b.ID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(sources) != 1 {
+		t.Fatalf("expected 1, got %d", len(sources))
+	}
+	if !sources[0].Remaining.Equal(dec("600")) {
+		t.Errorf("remaining: expected 600, got %s", sources[0].Remaining)
+	}
+}
+
+func TestListDeployableSources_FullyDrawnExcluded(t *testing.T) {
+	s := newTestStore(t)
+	svc := service.NewPoolService(s)
+	b, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B", Type: domain.BucketTypeFlat, TargetPct: dec("100")})
+	ev, _ := s.BudgetEvents.CreateBudgetEvent(ctx, domain.BudgetEvent{
+		TotalAmount: dec("1000"), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+	c, _ := s.Contributions.CreateContribution(ctx, domain.Contribution{
+		BucketID: b.ID, Amount: dec("500"), Origination: domain.OriginationBudget,
+		BudgetEventID: pInt64(ev.ID), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+	_ = s.InTx(ctx, func(tx *db.Store) error {
+		_, err := tx.Deployments.CreateDeployment(ctx,
+			domain.Deployment{BucketID: b.ID, Amount: dec("500"), Date: time.Date(2026, 5, 5, 0, 0, 0, 0, time.UTC)},
+			[]domain.DeploymentSource{{ContributionID: c.ID, Amount: dec("500")}},
+		)
+		return err
+	})
+
+	sources, err := svc.ListDeployableSources(ctx, b.ID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(sources) != 0 {
+		t.Errorf("fully drawn should be excluded; got %d", len(sources))
+	}
+}
+
 // --- PoolService ---
 
 func TestGetPoolBalance(t *testing.T) {

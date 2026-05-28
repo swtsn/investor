@@ -66,3 +66,9 @@ type DeploymentSource struct {
 	ContributionID int64
 	Amount         decimal.Decimal
 }
+
+// ContributionSummary pairs a Contribution with its deployable remaining balance.
+type ContributionSummary struct {
+	Contribution
+	Remaining decimal.Decimal
+}

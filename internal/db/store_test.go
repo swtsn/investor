@@ -301,6 +301,103 @@ func TestDeploymentWithSharesAndSymbol(t *testing.T) {
 	}
 }
 
+// --- ListDeployableSources ---
+
+func TestListDeployableSources_NoContributions(t *testing.T) {
+	s := newTestStore(t)
+	b, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B", Type: domain.BucketTypeFlat, TargetPct: dec("100")})
+
+	sources, err := s.Contributions.ListDeployableSources(ctx, b.ID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(sources) != 0 {
+		t.Errorf("expected 0 sources, got %d", len(sources))
+	}
+}
+
+func TestListDeployableSources_FullyDrawn(t *testing.T) {
+	s := newTestStore(t)
+	b, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B", Type: domain.BucketTypeFlat, TargetPct: dec("100")})
+	ev, _ := s.BudgetEvents.CreateBudgetEvent(ctx, domain.BudgetEvent{TotalAmount: dec("1000"), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)})
+	c, _ := s.Contributions.CreateContribution(ctx, domain.Contribution{
+		BucketID: b.ID, Amount: dec("500"), Origination: domain.OriginationBudget,
+		BudgetEventID: pInt64(ev.ID), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+	_ = s.InTx(ctx, func(tx *db.Store) error {
+		_, err := tx.Deployments.CreateDeployment(ctx,
+			domain.Deployment{BucketID: b.ID, Amount: dec("500"), Date: time.Date(2026, 5, 2, 0, 0, 0, 0, time.UTC)},
+			[]domain.DeploymentSource{{ContributionID: c.ID, Amount: dec("500")}},
+		)
+		return err
+	})
+
+	sources, err := s.Contributions.ListDeployableSources(ctx, b.ID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(sources) != 0 {
+		t.Errorf("fully drawn contribution should be excluded; got %d sources", len(sources))
+	}
+}
+
+func TestListDeployableSources_PartiallyDrawn(t *testing.T) {
+	s := newTestStore(t)
+	b, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B", Type: domain.BucketTypeFlat, TargetPct: dec("100")})
+	ev, _ := s.BudgetEvents.CreateBudgetEvent(ctx, domain.BudgetEvent{TotalAmount: dec("1000"), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)})
+	c, _ := s.Contributions.CreateContribution(ctx, domain.Contribution{
+		BucketID: b.ID, Amount: dec("500"), Origination: domain.OriginationBudget,
+		BudgetEventID: pInt64(ev.ID), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+	_ = s.InTx(ctx, func(tx *db.Store) error {
+		_, err := tx.Deployments.CreateDeployment(ctx,
+			domain.Deployment{BucketID: b.ID, Amount: dec("200"), Date: time.Date(2026, 5, 2, 0, 0, 0, 0, time.UTC)},
+			[]domain.DeploymentSource{{ContributionID: c.ID, Amount: dec("200")}},
+		)
+		return err
+	})
+
+	sources, err := s.Contributions.ListDeployableSources(ctx, b.ID)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(sources) != 1 {
+		t.Fatalf("expected 1 partially-drawn source, got %d", len(sources))
+	}
+	if !sources[0].Remaining.Equal(dec("300")) {
+		t.Errorf("remaining: expected 300, got %s", sources[0].Remaining)
+	}
+	if sources[0].ID != c.ID {
+		t.Errorf("contribution ID mismatch")
+	}
+}
+
+func TestListDeployableSources_MultipleBuckets(t *testing.T) {
+	s := newTestStore(t)
+	b1, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B1", Type: domain.BucketTypeFlat, TargetPct: dec("50")})
+	b2, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B2", Type: domain.BucketTypeFlat, TargetPct: dec("50")})
+	ev, _ := s.BudgetEvents.CreateBudgetEvent(ctx, domain.BudgetEvent{TotalAmount: dec("1000"), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)})
+	_, _ = s.Contributions.CreateContribution(ctx, domain.Contribution{
+		BucketID: b1.ID, Amount: dec("500"), Origination: domain.OriginationBudget,
+		BudgetEventID: pInt64(ev.ID), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+	_, _ = s.Contributions.CreateContribution(ctx, domain.Contribution{
+		BucketID: b2.ID, Amount: dec("500"), Origination: domain.OriginationBudget,
+		BudgetEventID: pInt64(ev.ID), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+
+	sources, err := s.Contributions.ListDeployableSources(ctx, b1.ID)
+	if err != nil {
+		t.Fatalf("list b1: %v", err)
+	}
+	if len(sources) != 1 {
+		t.Errorf("b1: expected 1 source, got %d", len(sources))
+	}
+	if sources[0].BucketID != b1.ID {
+		t.Errorf("b1: expected bucket ID %d, got %d", b1.ID, sources[0].BucketID)
+	}
+}
+
 // --- InTx rollback ---
 
 func TestInTxRollback(t *testing.T) {
