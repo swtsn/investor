@@ -1,10 +1,18 @@
-.PHONY: test lint vet
+.PHONY: all build test vet lint clean
 
-test:
+all: build
+
+build: vet
+	go build ./...
+
+test: vet
 	go test ./...
-
-lint:
-	golangci-lint run ./...
 
 vet:
 	go vet ./...
+
+lint: vet
+	golangci-lint run ./...
+
+clean:
+	go clean ./...
