@@ -20,7 +20,7 @@ A TUI application for planning and tracking investment diversification and alloc
 
 **DeploymentSource** — A join between a Deployment and a Contribution, recording how much of a given Deployment was drawn from a specific Contribution. Enables a single Deployment to draw from multiple funding sources (e.g., part budget, part slush).
 
-**Slush** — Undeployed funds carried over from the prior month. Modeled as an explicit `Contribution` with `origination=slush`, auto-generated per bucket when a new `BudgetEvent` is applied: `slush = prev_slush + prev_month_remaining_budget`. Slush deployments use the `discretionary` deployment type.
+**Slush** — Undeployed funds carried over from a prior period. Modeled as an explicit `Contribution` with `origination=slush`. Auto-generated per bucket on the *first* `BudgetEvent` of a new month: `slush_amount = Σ all-time contributions − Σ all-time deployments` (the running pool balance at that moment). Subsequent `BudgetEvent`s in the same month (top-ups) do not generate slush. Only written if `slush_amount > 0`.
 
 **Month** — A navigable view of all events within a calendar month. Derived from event timestamps; not a stored entity.
 
