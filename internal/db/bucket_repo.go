@@ -19,7 +19,7 @@ func (r *sqliteBucketRepo) ListBuckets(ctx context.Context) ([]domain.Bucket, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []domain.Bucket
 	for rows.Next() {
@@ -91,7 +91,7 @@ func (r *sqliteBucketRepo) ListAllocations(ctx context.Context, bucketID int64) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []domain.Allocation
 	for rows.Next() {

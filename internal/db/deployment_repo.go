@@ -60,7 +60,7 @@ func (r *sqliteDeploymentRepo) ListByBucket(ctx context.Context, bucketID int64)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanDeployments(rows)
 }
 
@@ -74,7 +74,7 @@ func (r *sqliteDeploymentRepo) ListByBucketAndMonth(ctx context.Context, bucketI
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanDeployments(rows)
 }
 
@@ -86,7 +86,7 @@ func (r *sqliteDeploymentRepo) ListSourcesByDeployment(ctx context.Context, depl
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []domain.DeploymentSource
 	for rows.Next() {

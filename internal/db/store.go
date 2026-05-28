@@ -36,16 +36,16 @@ func Open(path string) (*Store, error) {
 
 	ctx := context.Background()
 	if _, err := db.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("set foreign_keys pragma: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, `PRAGMA journal_mode = WAL`); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("set journal_mode pragma: %w", err)
 	}
 
 	if err := migrate(ctx, db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
@@ -61,6 +61,9 @@ func Open(path string) (*Store, error) {
 func (s *Store) Close() error {
 	return s.db.Close()
 }
+
+// DB returns the underlying *sql.DB. Intended for integration tests that need raw SQL access.
+func (s *Store) DB() *sql.DB { return s.db }
 
 // InTx runs fn inside a transaction. All repos on the passed *Store share the same *sql.Tx.
 // Rolls back on error, commits on success.

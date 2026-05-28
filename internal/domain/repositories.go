@@ -14,6 +14,7 @@ type BucketRepository interface {
 
 type ContributionRepository interface {
 	CreateContribution(ctx context.Context, c Contribution) (Contribution, error)
+	GetContribution(ctx context.Context, id int64) (Contribution, error)
 	ListByBucket(ctx context.Context, bucketID int64) ([]Contribution, error)
 	ListByBucketAndMonth(ctx context.Context, bucketID int64, year, month int) ([]Contribution, error)
 }

@@ -34,7 +34,7 @@ func (r *sqliteBudgetEventRepo) ListByMonth(ctx context.Context, year, month int
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []domain.BudgetEvent
 	for rows.Next() {

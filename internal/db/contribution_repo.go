@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,6 +28,28 @@ func (r *sqliteContributionRepo) CreateContribution(ctx context.Context, c domai
 	return c, err
 }
 
+func (r *sqliteContributionRepo) GetContribution(ctx context.Context, id int64) (domain.Contribution, error) {
+	var c domain.Contribution
+	var amount, dateStr string
+	err := r.q.QueryRowContext(ctx,
+		`SELECT id, bucket_id, amount, origination, budget_event_id, date
+		 FROM contributions WHERE id = ?`, id,
+	).Scan(&c.ID, &c.BucketID, &amount, &c.Origination, &c.BudgetEventID, &dateStr)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.Contribution{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.Contribution{}, err
+	}
+	if c.Amount, err = decimal.NewFromString(amount); err != nil {
+		return domain.Contribution{}, fmt.Errorf("parse amount: %w", err)
+	}
+	if c.Date, err = time.Parse(time.RFC3339, dateStr); err != nil {
+		return domain.Contribution{}, fmt.Errorf("parse date: %w", err)
+	}
+	return c, nil
+}
+
 func (r *sqliteContributionRepo) ListByBucket(ctx context.Context, bucketID int64) ([]domain.Contribution, error) {
 	rows, err := r.q.QueryContext(ctx,
 		`SELECT id, bucket_id, amount, origination, budget_event_id, date
@@ -35,7 +59,7 @@ func (r *sqliteContributionRepo) ListByBucket(ctx context.Context, bucketID int6
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanContributions(rows)
 }
 
@@ -49,7 +73,7 @@ func (r *sqliteContributionRepo) ListByBucketAndMonth(ctx context.Context, bucke
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanContributions(rows)
 }
 

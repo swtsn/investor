@@ -17,7 +17,7 @@ func newTestStore(t *testing.T) *db.Store {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	t.Cleanup(func() { s.Close() })
+	t.Cleanup(func() { _ = s.Close() })
 	return s
 }
 
@@ -113,6 +113,38 @@ func TestAllocationUpsertAndDelete(t *testing.T) {
 }
 
 // --- Contributions ---
+
+func TestGetContribution(t *testing.T) {
+	s := newTestStore(t)
+	b, _ := s.Buckets.CreateBucket(ctx, domain.Bucket{Name: "B", Type: domain.BucketTypeFlat, TargetPct: dec("100")})
+	ev, _ := s.BudgetEvents.CreateBudgetEvent(ctx, domain.BudgetEvent{TotalAmount: dec("1000"), Date: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)})
+	created, _ := s.Contributions.CreateContribution(ctx, domain.Contribution{
+		BucketID:      b.ID,
+		Amount:        dec("500"),
+		Origination:   domain.OriginationBudget,
+		BudgetEventID: pInt64(ev.ID),
+		Date:          time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+	})
+
+	got, err := s.Contributions.GetContribution(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.ID != created.ID || !got.Amount.Equal(dec("500")) || got.BucketID != b.ID {
+		t.Errorf("unexpected: %+v", got)
+	}
+	if got.Origination != domain.OriginationBudget {
+		t.Errorf("origination: expected budget, got %s", got.Origination)
+	}
+}
+
+func TestGetContributionNotFound(t *testing.T) {
+	s := newTestStore(t)
+	_, err := s.Contributions.GetContribution(ctx, 999)
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
 
 func TestContributionCRUD(t *testing.T) {
 	s := newTestStore(t)
