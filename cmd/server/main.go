@@ -40,8 +40,9 @@ func main() {
 	budget := service.NewBudgetService(store)
 	deploy := service.NewDeploymentService(store)
 	pool := service.NewPoolService(store)
+	bucket := service.NewBucketService(store)
 
-	handler := investorgrpc.NewInvestorHandler(budget, deploy, pool)
+	handler := investorgrpc.NewInvestorHandler(budget, deploy, pool, bucket)
 
 	srv := grpc.NewServer()
 	investorv1.RegisterInvestorServiceServer(srv, handler)

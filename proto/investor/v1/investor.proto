@@ -17,6 +17,10 @@ service InvestorService {
   rpc PreviewDeployment(PreviewDeploymentRequest) returns (PreviewDeploymentResponse);
   rpc RecordDeployment(RecordDeploymentRequest) returns (RecordDeploymentResponse);
   rpc RecordReinvestment(RecordReinvestmentRequest) returns (RecordReinvestmentResponse);
+  rpc CreateBucket(CreateBucketRequest) returns (CreateBucketResponse);
+  rpc UpdateBucket(UpdateBucketRequest) returns (UpdateBucketResponse);
+  rpc UpsertAllocation(UpsertAllocationRequest) returns (UpsertAllocationResponse);
+  rpc DeleteAllocation(DeleteAllocationRequest) returns (DeleteAllocationResponse);
 }
 
 // --- Shared domain messages ---
@@ -197,3 +201,35 @@ message RecordReinvestmentRequest {
 message RecordReinvestmentResponse {
   Contribution contribution = 1;
 }
+
+// --- CreateBucket ---
+
+message CreateBucketRequest {
+  string name = 1;
+  string type = 2;       // "flat" or "diversified"
+  string target_pct = 3; // decimal string
+}
+message CreateBucketResponse { Bucket bucket = 1; }
+
+// --- UpdateBucket ---
+
+message UpdateBucketRequest {
+  int64 id = 1;
+  string name = 2;
+  string target_pct = 3; // type intentionally omitted — immutable
+}
+message UpdateBucketResponse { Bucket bucket = 1; }
+
+// --- UpsertAllocation ---
+
+message UpsertAllocationRequest {
+  int64 bucket_id = 1;
+  string name = 2;
+  string target_pct = 3;
+}
+message UpsertAllocationResponse { Allocation allocation = 1; }
+
+// --- DeleteAllocation ---
+
+message DeleteAllocationRequest { int64 id = 1; }
+message DeleteAllocationResponse {}

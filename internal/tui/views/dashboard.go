@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/shopspring/decimal"
 
 	"github.com/swtsn/investor/internal/tui/client"
 )
@@ -93,7 +94,7 @@ func (v DashboardView) load() tea.Cmd {
 func buildDashboardTable(data []client.BucketDashboard, w, h int) table.Model {
 	_ = w
 	cols := []table.Column{
-		{Title: "Bucket", Width: 12},
+		{Title: "Bucket", Width: 14},
 		{Title: "Pool", Width: 10},
 		{Title: "Budget", Width: 10},
 		{Title: "Reinvest", Width: 10},
@@ -102,13 +103,24 @@ func buildDashboardTable(data []client.BucketDashboard, w, h int) table.Model {
 		{Title: "Actual (Target)", Width: 15},
 	}
 
+	hundred := decimal.NewFromInt(100)
+	var bucketSum decimal.Decimal
+	for _, d := range data {
+		bucketSum = bucketSum.Add(d.Bucket.TargetPct)
+	}
+	pctOk := len(data) == 0 || bucketSum.Equal(hundred)
+
 	rows := make([]table.Row, len(data))
 	for i, d := range data {
+		name := d.Bucket.Name
+		if !pctOk {
+			name = "! " + name
+		}
 		alloc := fmt.Sprintf("%s%% (%s%%)",
 			d.ActualPct.StringFixed(1),
 			d.Bucket.TargetPct.StringFixed(1))
 		rows[i] = table.Row{
-			d.Bucket.Name,
+			name,
 			formatCurrency(d.PoolBalance),
 			formatCurrency(d.Budget),
 			formatCurrency(d.Reinvestment),

@@ -32,6 +32,8 @@ A TUI application for planning and tracking investment diversification and alloc
 2. Diversified buckets split a deployment amount across symbols at decision time using current allocation percentages.
 3. Month is always a rollup; there is no concept of opening or closing a month.
 4. All prices are entered manually at fill time — no live market data.
+5. Bucket type (`flat` / `diversified`) is immutable after creation.
+6. Allocation name is immutable — it is the natural key within a bucket. Changing the target percentage is supported; renaming is not.
 
 ## Out of Scope
 

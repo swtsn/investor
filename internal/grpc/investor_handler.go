@@ -21,18 +21,25 @@ type InvestorHandler struct {
 	budget *service.BudgetService
 	deploy *service.DeploymentService
 	pool   *service.PoolService
+	bucket *service.BucketService
 }
 
 // NewInvestorHandler wires a handler backed by the given services.
-func NewInvestorHandler(budget *service.BudgetService, deploy *service.DeploymentService, pool *service.PoolService) *InvestorHandler {
-	return &InvestorHandler{budget: budget, deploy: deploy, pool: pool}
+func NewInvestorHandler(budget *service.BudgetService, deploy *service.DeploymentService, pool *service.PoolService, bucket *service.BucketService) *InvestorHandler {
+	return &InvestorHandler{budget: budget, deploy: deploy, pool: pool, bucket: bucket}
 }
 
 func toGRPCError(err error) error {
-	if errors.Is(err, domain.ErrNotFound) {
+	switch {
+	case errors.Is(err, domain.ErrNotFound):
 		return status.Error(codes.NotFound, "not found")
+	case errors.Is(err, domain.ErrBucketIsFlat):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, domain.ErrAllocationHasDeployments):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	default:
+		return status.Errorf(codes.Internal, "%v", err)
 	}
-	return status.Errorf(codes.Internal, "%v", err)
 }
 
 // --- proto conversion helpers ---
@@ -306,4 +313,47 @@ func (h *InvestorHandler) RecordReinvestment(ctx context.Context, req *investorv
 		return nil, toGRPCError(err)
 	}
 	return &investorv1.RecordReinvestmentResponse{Contribution: contributionToProto(c)}, nil
+}
+
+func (h *InvestorHandler) CreateBucket(ctx context.Context, req *investorv1.CreateBucketRequest) (*investorv1.CreateBucketResponse, error) {
+	targetPct, err := decimal.NewFromString(req.TargetPct)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid target_pct: %v", err)
+	}
+	b, err := h.bucket.CreateBucket(ctx, req.Name, domain.BucketType(req.Type), targetPct)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &investorv1.CreateBucketResponse{Bucket: bucketToProto(b)}, nil
+}
+
+func (h *InvestorHandler) UpdateBucket(ctx context.Context, req *investorv1.UpdateBucketRequest) (*investorv1.UpdateBucketResponse, error) {
+	targetPct, err := decimal.NewFromString(req.TargetPct)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid target_pct: %v", err)
+	}
+	b, err := h.bucket.UpdateBucket(ctx, req.Id, req.Name, targetPct)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &investorv1.UpdateBucketResponse{Bucket: bucketToProto(b)}, nil
+}
+
+func (h *InvestorHandler) UpsertAllocation(ctx context.Context, req *investorv1.UpsertAllocationRequest) (*investorv1.UpsertAllocationResponse, error) {
+	targetPct, err := decimal.NewFromString(req.TargetPct)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid target_pct: %v", err)
+	}
+	a, err := h.bucket.UpsertAllocation(ctx, req.BucketId, req.Name, targetPct)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &investorv1.UpsertAllocationResponse{Allocation: allocationToProto(a)}, nil
+}
+
+func (h *InvestorHandler) DeleteAllocation(ctx context.Context, req *investorv1.DeleteAllocationRequest) (*investorv1.DeleteAllocationResponse, error) {
+	if err := h.bucket.DeleteAllocation(ctx, req.Id); err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &investorv1.DeleteAllocationResponse{}, nil
 }

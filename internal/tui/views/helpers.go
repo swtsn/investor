@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	errorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	dimStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	tableStyle = lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("8"))
-	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
+	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+	dimStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	tableStyle   = lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("8"))
+	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
 )
 
 func defaultTableStyles() table.Styles {

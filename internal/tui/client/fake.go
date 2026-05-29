@@ -83,6 +83,22 @@ func (f *Fake) RecordReinvestment(_ context.Context, _ int64, _ decimal.Decimal,
 	return f.Err
 }
 
+func (f *Fake) CreateBucket(_ context.Context, _ string, _ domain.BucketType, _ decimal.Decimal) (domain.Bucket, error) {
+	return domain.Bucket{}, f.Err
+}
+
+func (f *Fake) UpdateBucket(_ context.Context, _ int64, _ string, _ decimal.Decimal) (domain.Bucket, error) {
+	return domain.Bucket{}, f.Err
+}
+
+func (f *Fake) UpsertAllocation(_ context.Context, _ int64, _ string, _ decimal.Decimal) (domain.Allocation, error) {
+	return domain.Allocation{}, f.Err
+}
+
+func (f *Fake) DeleteAllocation(_ context.Context, _ int64) error {
+	return f.Err
+}
+
 func (f *Fake) Close() error { return nil }
 
 // Compile-time check that Fake implements Client.

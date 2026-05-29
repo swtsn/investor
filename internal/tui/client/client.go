@@ -70,6 +70,10 @@ type Client interface {
 	PreviewDeployment(ctx context.Context, bucketID int64, amount decimal.Decimal) ([]AllocationSplit, error)
 	RecordDeployment(ctx context.Context, d domain.Deployment, sources []domain.DeploymentSource) error
 	RecordReinvestment(ctx context.Context, bucketID int64, amount decimal.Decimal, date time.Time) error
+	CreateBucket(ctx context.Context, name string, bucketType domain.BucketType, targetPct decimal.Decimal) (domain.Bucket, error)
+	UpdateBucket(ctx context.Context, id int64, name string, targetPct decimal.Decimal) (domain.Bucket, error)
+	UpsertAllocation(ctx context.Context, bucketID int64, name string, targetPct decimal.Decimal) (domain.Allocation, error)
+	DeleteAllocation(ctx context.Context, id int64) error
 	Close() error
 }
 
@@ -272,6 +276,47 @@ func (c *grpcClient) RecordReinvestment(ctx context.Context, bucketID int64, amo
 		Amount:   amount.String(),
 		Date:     timestamppb.New(date),
 	})
+	return err
+}
+
+func (c *grpcClient) CreateBucket(ctx context.Context, name string, bucketType domain.BucketType, targetPct decimal.Decimal) (domain.Bucket, error) {
+	resp, err := c.svc.CreateBucket(ctx, &investorv1.CreateBucketRequest{
+		Name:      name,
+		Type:      string(bucketType),
+		TargetPct: targetPct.String(),
+	})
+	if err != nil {
+		return domain.Bucket{}, err
+	}
+	return protoBucket(resp.Bucket), nil
+}
+
+func (c *grpcClient) UpdateBucket(ctx context.Context, id int64, name string, targetPct decimal.Decimal) (domain.Bucket, error) {
+	resp, err := c.svc.UpdateBucket(ctx, &investorv1.UpdateBucketRequest{
+		Id:        id,
+		Name:      name,
+		TargetPct: targetPct.String(),
+	})
+	if err != nil {
+		return domain.Bucket{}, err
+	}
+	return protoBucket(resp.Bucket), nil
+}
+
+func (c *grpcClient) UpsertAllocation(ctx context.Context, bucketID int64, name string, targetPct decimal.Decimal) (domain.Allocation, error) {
+	resp, err := c.svc.UpsertAllocation(ctx, &investorv1.UpsertAllocationRequest{
+		BucketId:  bucketID,
+		Name:      name,
+		TargetPct: targetPct.String(),
+	})
+	if err != nil {
+		return domain.Allocation{}, err
+	}
+	return protoAllocation(resp.Allocation), nil
+}
+
+func (c *grpcClient) DeleteAllocation(ctx context.Context, id int64) error {
+	_, err := c.svc.DeleteAllocation(ctx, &investorv1.DeleteAllocationRequest{Id: id})
 	return err
 }
 
