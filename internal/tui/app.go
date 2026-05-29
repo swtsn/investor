@@ -25,6 +25,7 @@ const (
 	modeDeploy
 	modeReinvest
 	modeSetup
+	modePlan
 )
 
 // App is the root bubbletea model.
@@ -38,6 +39,7 @@ type App struct {
 	deploy    views.DeployView
 	reinvest  views.ReinvestView
 	setup     views.SetupView
+	plan      views.PlanView
 }
 
 func New(c client.Client) App {
@@ -50,6 +52,7 @@ func New(c client.Client) App {
 		deploy:    views.NewDeployView(c),
 		reinvest:  views.NewReinvestView(c),
 		setup:     views.NewSetupView(c),
+		plan:      views.NewPlanView(c),
 	}
 }
 
@@ -91,6 +94,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a.switchTo(modeMonth)
 			case "s":
 				return a.switchTo(modeSetup)
+			case "p":
+				return a.switchTo(modePlan)
 			}
 		}
 
@@ -108,7 +113,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a App) View() string {
-	help := "[b]udget  [d]eploy  [r]einvest  [m]onth  [s]etup  [q]uit"
+	help := "[b]udget  [d]eploy  [r]einvest  [m]onth  [s]etup  [p]lan  [q]uit"
 	return fmt.Sprintf("%s\n\n%s", a.activeView(), help)
 }
 
@@ -124,6 +129,8 @@ func (a App) activeView() string {
 		return a.reinvest.View()
 	case modeSetup:
 		return a.setup.View()
+	case modePlan:
+		return a.plan.View()
 	default:
 		return a.dashboard.View()
 	}
@@ -141,6 +148,8 @@ func (a App) activeInputActive() bool {
 		return a.reinvest.InputActive()
 	case modeSetup:
 		return a.setup.InputActive()
+	case modePlan:
+		return a.plan.InputActive()
 	default:
 		return a.dashboard.InputActive()
 	}
@@ -162,6 +171,8 @@ func (a App) switchTo(m mode) (tea.Model, tea.Cmd) {
 		a.reinvest, cmd = a.reinvest.Update(loadMsg, a.state)
 	case modeSetup:
 		a.setup, cmd = a.setup.Update(loadMsg, a.state)
+	case modePlan:
+		a.plan, cmd = a.plan.Update(loadMsg, a.state)
 	default:
 		a.dashboard, cmd = a.dashboard.Update(loadMsg, a.state)
 	}
@@ -181,6 +192,8 @@ func (a App) routeToActive(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.reinvest, cmd = a.reinvest.Update(msg, a.state)
 	case modeSetup:
 		a.setup, cmd = a.setup.Update(msg, a.state)
+	case modePlan:
+		a.plan, cmd = a.plan.Update(msg, a.state)
 	default:
 		a.dashboard, cmd = a.dashboard.Update(msg, a.state)
 	}
@@ -194,4 +207,5 @@ func (a *App) propagateSize() {
 	a.deploy.Resize(a.state.Width, a.state.Height)
 	a.reinvest.Resize(a.state.Width, a.state.Height)
 	a.setup.Resize(a.state.Width, a.state.Height)
+	a.plan.Resize(a.state.Width, a.state.Height)
 }

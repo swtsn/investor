@@ -134,7 +134,7 @@ func buildDashboardTable(data []client.BucketDashboard, w, h int) table.Model {
 		table.WithColumns(cols),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(h-2),
+		table.WithHeight(h-3),
 	)
 	t.SetStyles(defaultTableStyles())
 	return t
